@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Waterstream Fleet Demo</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <script src="https://kit.fontawesome.com/93b990e741.js" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.2.0/dist/leaflet.css"
+          integrity="sha512-M2wvCLH6DSRazYeZRIm1JnYyh22purTM+FDB5CsyxtQJYeKq83arPe5wgbNmcFXGqiSH2XR8dT/fJISVA1r/zQ=="
+          crossorigin=""/>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/emn178/chartjs-plugin-labels/src/chartjs-plugin-labels.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.min.css"/>
+    <link rel="stylesheet" type="text/css"
+          href="https://cdn.jsdelivr.net/npm/cookieconsent@3/build/cookieconsent.min.css"/>
+    <script src="https://unpkg.com/scrollreveal@4"></script>
+    <!--    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js" type="text/javascript"></script>-->
+    <script src="js/paho-mqtt-1.0.3-min.js" type="text/javascript"></script>
+
+
+    <link rel="stylesheet" href="css/leaflet-sidebar.css"/>
+    <link rel="stylesheet" href="css/main.css"/>
+
+    <link rel="icon"
+          type="image/png"
+          href="img/SimpleMatter_logo_blue_nopayoff.png">
+</head>
+
+<body>
+<div id="cookieconsent"></div>
+<!-- optionally define the sidebar content via HTML markup -->
+<div id="sidebar" class="leaflet-sidebar">
+
+    <!-- nav tabs -->
+    <div class="leaflet-sidebar-tabs">
+        <!-- top aligned tabs -->
+        <ul role="tablist">
+            <li><a href="#home" role="tab"><i class="fas fa-bars active"></i></a></li>
+        </ul>
+
+        <!-- bottom aligned tabs -->
+        <ul role="tablist">
+            <li><a href="#info" role="tab"><i class="fas fa-info-circle"></i></i></a></li>
+        </ul>
+    </div>
+
+    <!-- panel content -->
+    <div class="leaflet-sidebar-content" id="content">
+        <div class="leaflet-sidebar-pane" id="home">
+
+            <h1 class="leaflet-sidebar-header">
+                Waterstream Fleet Demo
+                <span class="leaflet-sidebar-close"><i class="fas fa-caret-left"></i></span>
+            </h1>
+
+            <div class="reveal mb20">
+                <h3>Waterstream</h3>
+                <p>Waterstream is a fully fledged MQTT broker leveraging Kafka as its only storage and distribution
+                    engine.</p>
+                <p>Every MQTT message sent by a device is immediately available on Kafka topics without the need of any
+                    'man in the middle' connector. Likewise, devices can instantly receive produced messages on Kafka by
+                    subscribing to MQTT topics. Waterstream instances are stateless and therefore easy to scale out.
+                    This makes of Waterstream a light platform guaranteeing better throughput, reduced latency between
+                    Kafka and devices as well as less operational effort.</p>
+            </div>
+            <div class="reveal mb20">
+                <h3>The Fleet Demo</h3>
+                <p>In this demo, we simulate thousands of trucks driving around Italy, you can see fifteen of them
+                    on the map.</p>
+                <p>To follow one truck in its route, just click on its label. Sending MQTT messages
+                    to the Waterstream, each truck continuously communicates its current position, the next way-point
+                    and
+                    the speed.</p>
+            </div>
+            <div class="reveal mb20">
+                <h3>No man in the middle</h3>
+                <p>There's no Kafka connector or other integration technology between Waterstream and Apache
+                    Kafka. As soon messages are received by Waterstream, they are available in Apache Kafka topics.</p>
+                <p>This allows to integrate quickly an IoT platform with operational systems or the data analytics
+                    without any other system in the middle.</p>
+                <p>Unlike available Kafka connectors, Waterstream allows bidirectional communication. Data written into
+                    topics can be pushed to devices. </p>
+            </div>
+            <div class="reveal mb20">
+                <h3>Waterstream exposes MQTT topics and metrics with Prometeus</h3>
+                <p> It's easy to collect and show data coming from Waterstream with
+                    Grafana. In the following graph, we show the current message rate and how many messages were
+                    received so far by the Waterstream broker.</p>
+            </div>
+            <div class="reveal mb20">
+                <div class="text-center">
+                    <iframe th:src="${messageCount}" src="" width="380" height="250" frameborder="0"></iframe>
+                    <a class="btn btn-primary mt10 scroll-link" style="color: white;"
+                       target="_blank"
+                       href="https://dashboard.waterstream.io/d/ilHi2H-Zz/waterstream-fleet-demo?orgId=2&refresh=5s"
+                       data-id="contact">Open the dashboard</a>
+                </div>
+            </div>
+            <div class="reveal mb20">
+                <h3>Explore and manage data easily with kSQL</h3>
+                <p>Hence MQTT messages are stored directly in Kafka, you can aggregate them with any streaming
+                    technology
+                    like Kafka Streams or kSQL.</p>
+                <p>Below we built a real time graph that shows where trucks are headed using current position and
+                    waypoint. Graph data comes from a kSQL query
+                    that aggregates MQTT messages saved on a Kafka topic.
+                </p>
+            </div>
+            <div class="reveal mb20">
+                <canvas id="vehiclesStats" width="380" height="250"></canvas>
+            </div>
+            <div class="reveal mb20">
+                <p>The following are the ksqlDB queries we used to aggregate MQTT messages in real time.</p>
+                <code><pre>
+CREATE TABLE fleet_table(
+  plate STRING,
+  current STRUCT&lt;lat DOUBLE, lng DOUBLE&gt;,
+  waypoint STRUCT&lt;lat DOUBLE, lng DOUBLE&gt;,
+  speed DOUBLE,
+  distance DOUBLE,
+  updateTimestamp BIGINT) WITH
+  (KAFKA_TOPIC='waterstream_fleet_demo',
+    VALUE_FORMAT='JSON', KEY='plate');
+                </pre>
+                </code>
+            </div>
+            <div class="reveal mb10">
+                <code><pre>
+CREATE TABLE fleet_directions AS
+  SELECT plate,
+    CASE
+      WHEN
+        waypoint->lat >= current->lat AND
+        waypoint->lng >= current->lng
+        THEN 'NE'
+      WHEN
+        waypoint->lat >= current->lat AND
+        waypoint->lng < current->lng
+        THEN 'NW'
+      WHEN
+        waypoint->lat < current->lat AND
+        waypoint->lng <= current->lng
+        THEN 'SW'
+      ELSE 'SE'
+    END AS direction FROM fleet_table
+  EMIT CHANGES;
+                </pre>
+                </code>
+            </div>
+            <div class="reveal mb10">
+                <code><pre>
+CREATE TABLE directions_vehicles AS
+  SELECT direction, COUNT(*) as vehicles_count
+    FROM fleet_directions
+    GROUP BY direction EMIT CHANGES;
+</pre>
+                </code>
+            </div>
+            <div class="reveal mb10">
+                <p>And these ksqlDB queries represent the aggregates in MQTT-friendly format:</p>
+                <code><pre>
+CREATE STREAM directions_vehicles_stream
+  (direction STRING, vehicles_count INTEGER)
+  WITH (KAFKA_TOPIC='DIRECTIONS_VEHICLES',
+        VALUE_FORMAT='JSON', KEY='direction');
+</pre>
+                </code>
+            </div>
+            <div class="reveal mb10">
+                <code><pre>
+CREATE STREAM directions_vehicles_mqtt
+  AS SELECT direction,
+  vehicles_count,
+  'waterstream-fleet-demo/direction-stats/' +
+    direction AS mqtt_topic
+  FROM directions_vehicles_stream
+  PARTITION BY mqtt_topic;
+</pre>
+                </code>
+            </div>
+        </div>
+        <div class="reveal pb50">
+            <h3>Try it now!</h3>
+            <p>You can try it today for free! Go to <a target="_blank"
+                                                       href="https://waterstream.io#contact">waterstream.io</a>
+                to get
+                access to a running and dedicated instance.</p>
+            <p>Do you want to run it on premise? You are covered too, just drop us a message on our contact form and
+                we'll get back in touch with you.</p>
+            <div class="text-center">
+                <a class="btn btn-primary mt10 scroll-link" style="color: white;" target="_blank"
+                   href="https://waterstream.io#contact">Try Waterstream</a>
+            </div>
+        </div>
+        <div class="leaflet-sidebar-pane " id="info">
+            <h1 class="leaflet-sidebar-header">
+                Info
+                <span class="leaflet-sidebar-close"><i class="fas fa-info-circle"></i></span>
+            </h1>
+            <p> Want to know more about Waterstream? Check out <a href="https://waterstream.io">waterstream.io now!.</a>
+            </p>
+        </div>
+    </div>
+</div>
+</div>
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.2.0/dist/leaflet.js"
+        integrity="sha512-lInM/apFSqyy1o6s89K4iQUKg6ppXEgsVxT35HbzUupEVRh2Eu9Wdl4tHj7dZO0s1uvplcYGmt3498TtHq+log=="
+        crossorigin=""></script>
+<script src="../js/leaflet-sidebar.js"></script>
+
+<script src="https://cdn.jsdelivr.net/sockjs/0.3.4/sockjs.min.js"></script>
+<!--<script src="https://cdnjs.cloudflare.com/ajax/libs/vertx/3.8.3/vertx-eventbus.min.js"></script>-->
+
+<script>
+    var exports = {}; // workaround, see DrifMarker sample
+
+
+</script>
+
+<script src="https://unpkg.com/leaflet-drift-marker@1.0.3/lib/DriftMarker/Drift_Marker.js"></script>
+
+<script>
+    // standard leaflet map setup
+    let map = L.map('map');
+    map.setView([41.9102415, 12.395915], 6);
+
+    L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw', {
+        maxZoom: 18,
+        attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, ' +
+            '<a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, ' +
+            'Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
+        id: 'mapbox/streets-v11',
+        tileSize: 512,
+        zoomOffset: -1
+    }).addTo(map);
+
+    // create the sidebar instance and add it to the map
+    const sidebar = L.control.sidebar({container: 'sidebar'})
+        .addTo(map)
+        .open('home');
+
+    // be notified when a panel is opened
+    sidebar.on('content', function (ev) {
+        switch (ev.id) {
+            case 'autopan':
+                sidebar.options.autopan = true;
+                break;
+            default:
+                sidebar.options.autopan = false;
+        }
+    });
+
+    const vehiclesStatsChart = new Chart("vehiclesStats", {
+        type: 'doughnut',
+        data: {
+            labels: ['NE', 'SE', 'SW', 'NW'],
+            datasets: [{
+                data: [0, 0, 0, 0],
+                backgroundColor: [
+                    '#01077DFF',
+                    '#4E57FDFF',
+                    '#030FFCFF',
+                    '#272B7DFF'
+                ],
+                borderColor: [
+                    '#352B48FF',
+                    '#352B48FF',
+                    '#352B48FF',
+                    '#352B48FF'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            title: {
+                display: true,
+                text: "Vehicles by Directions"
+            },
+            plugins: {
+                labels: {
+                    fontColor: '#fff',
+                    render: "value"
+                }
+            }
+        }
+    });
+
+    const statsKeyIndex = {
+        "NE": 0,
+        "SE": 1,
+        "SW": 2,
+        "NW": 3
+    }
+
+    function updateVehicleStats(key, vehicles) {
+        const i = statsKeyIndex[key]
+        if (isNaN(i)) {
+            console.warn("Unknown key", key)
+        } else {
+            vehiclesStatsChart.data.datasets[0].data[i] = vehicles
+            vehiclesStatsChart.update()
+        }
+    }
+
+    let registry = new Map()
+
+    let plateToFollow = null
+
+    function addMarker(vehicle) {
+        console.log("Add marker", vehicle.plate);
+        var follow = vehicle.follow;
+
+        let marker = new Drift_Marker([vehicle.current.lat, vehicle.current.lng], {
+            draggable: false,
+            title: 'Truck: ' + vehicle.plate,
+            alt: 'Truck: ' + vehicle.plate,
+            riseOnHover: true,
+            keepAtCenter: follow
+        })
+            .addTo(map)
+            .bindPopup("Truck " + vehicle.plate);
+
+        if (plateToFollow == null) {
+            plateToFollow = vehicle.plate
+        }
+
+        if (plateToFollow == vehicle.plate) {
+            console.log("This is the truck to follow ", vehicle.plate);
+            marker.openPopup();
+            map.setView([vehicle.current.lat, vehicle.current.lng], 14);
+        } else {
+            console.debug("Other vehicle is followed instead of this", plateToFollow, vehicle.plate)
+        }
+
+        registry.set(vehicle.plate, marker);
+    }
+
+    function cleanMarkers() {
+        let markers = Array.from(registry.values());
+        markers.forEach(function (m) {
+            map.removeLayer(m);
+        });
+        registry = new Map()
+    }
+
+
+    function plateFromMqttTopic(topic) {
+        const lastSlash = topic.lastIndexOf("/")
+        if (lastSlash <= 0)
+            return topic
+        else
+            return topic.slice(lastSlash)
+    }
+
+    const mqttClientId = "[[${mqttClientPrefix}]]" + Math.floor(Math.random() * 1000000)
+    const mqttClient = new Paho.MQTT.Client("[[${mqttHost}]]", [[${mqttPort}]], "", mqttClientId);
+
+    function connectMqtt() {
+        console.debug("connecting MQTT client..")
+        mqttClient.connect({
+            useSSL: [[${mqttUseSsl}]],
+            cleanSession: true,
+            mqttVersion: 4,
+            onSuccess: function () {
+                console.debug("MQTT client connected", mqttClientId)
+                mqttClient.subscribe("[[${mqttVisibleVehiclesTopicPrefix}]]#")
+                mqttClient.subscribe("[[${mqttDirectionStatsTopicPrefix}]]#")
+                console.debug("Subscribed for MQTT topics")
+            }
+        })
+    }
+
+    mqttClient.onConnectionLost = function () {
+        console.warn("MQTT connection lost, reconnecting in 5 seconds...", mqttClientId)
+        cleanMarkers()
+        setTimeout(connectMqtt, 5000)
+    }
+    mqttClient.onMessageArrived = function (message) {
+        if (message.destinationName.startsWith("[[${mqttVisibleVehiclesTopicPrefix}]]")) {
+            //vehicle changes message
+            if (message.payloadString.length == 0) {
+                //vehicle deleted
+                const plate = plateFromMqttTopic(message.destinationName)
+                console.debug("vehicle deleted", message.destinationName, plate)
+                const marker = registry.get(plate);
+                map.removeLayer(marker);
+                registry.delete(plate);
+            } else {
+                //vehicle moved/created
+                try {
+                    const vehicle = JSON.parse(message.payloadString)
+                    console.debug("vehicle moved", message.destinationName, vehicle)
+
+                    let marker = registry.get(vehicle.plate);
+                    if (marker == null) {
+                        addMarker(vehicle)
+                    }
+                    marker = registry.get(vehicle.plate);
+                    marker.setLatLng(L.latLng(vehicle.current.lat, vehicle.current.lng));
+                } catch (e) {
+                    console.warn("Failed to create/update vehicle", e)
+                }
+            }
+        } else if (message.destinationName.startsWith("[[${mqttDirectionStatsTopicPrefix}]]")) {
+            const stats = JSON.parse(message.payloadString)
+            console.debug("statistics received", stats)
+            updateVehicleStats(stats.DIRECTION, stats.VEHICLES_COUNT)
+        }
+    }
+
+    connectMqtt()
+
+
+</script>
+
+<script>
+    ScrollReveal().reveal('#content .reveal', {
+        container: '#content',
+        origin: 'top',
+        scale: 0.6,
+        duration: 1500,
+        delay: 50
+    })
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/cookieconsent@3/build/cookieconsent.min.js"></script>
+<script>
+    window.cookieconsent.initialise({
+        container: document.getElementById("cookieconsent"),
+        palette: {
+            popup: {background: "#352B48"},
+            button: {background: "#0067FF"},
+        },
+        revokable: false,
+        onStatusChange: function (status) {
+            console.log(this.hasConsented() ?
+                'enable cookies' : 'disable cookies');
+        },
+        "position": "bottom-right",
+        "theme": "classic",
+        "domain": "https://fleetdemo.waterstream.io/",
+        "secure": true,
+        "content": {
+            "header": 'Cookies used on the website!',
+            "message": 'This website uses cookies to improve your experience.',
+            "dismiss": 'Got it!',
+            "allow": 'Allow cookies',
+            "deny": 'Decline',
+            "link": 'Learn more',
+            "href": '',
+            "close": '&#x274c;',
+            "policy": 'Cookie Policy',
+            "target": '_blank',
+        }
+    });
+
+
+</script>
+</body>
+</html>

@@ -1,0 +1,78 @@
+version: '3.3'
+
+networks:
+  demo-network:
+    external:
+      name: ${DOCKER_DEMO_NETWORK}
+
+services:
+  fleet-service:
+    networks:
+      - demo-network
+    ports:
+      - "8081:8081"
+      - "8091:8091"
+    environment:
+      ROUTING_URL: http://routing:8080/ors/directions
+      VEHICLES_TOTAL_NUMBER: ${VEHICLES_TOTAL_NUMBER}
+      VEHICLES_VISIBLE_NUMBER: ${VEHICLES_VISIBLE_NUMBER}
+      MQTT_HOST: waterstream
+      MQTT_PORT: 1883
+      MQTT_TOPIC_PREFIX: waterstream-fleet-demo/
+      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
+      MONITORING_PORT: 8091
+      MONITORING_INCLUDE_JAVA_METRICS: "true"
+      MQTT_USERNAME: ${MQTT_USERNAME}
+      MQTT_PASSWORD: ${MQTT_PASSWORD}
+    container_name: fleet-service
+    image: io.simplematter/fleet-service
+    depends_on:
+      - routing
+    restart: unless-stopped
+
+  fleet-ui:
+    networks:
+      - demo-network
+    ports:
+      - '8082:8080'
+    container_name: fleet-ui
+    environment:
+      MESSAGE_COUNT_PANEL_ADDRESS: ${MESSAGE_COUNT_PANEL_ADDRESS}
+    image: io.simplematter/fleet-ui
+    depends_on:
+      - fleet-service
+    restart: unless-stopped
+
+  routing:
+    networks:
+      - demo-network
+    container_name: routing
+    image: io.simplematter/openrouteservice
+    expose:
+      - 8080
+    volumes:
+      - ./volumes/ors/graphs:/ors-core/data/graphs
+      - ./volumes/ors/elevation_cache:/ors-core/data/elevation_cache
+      - ./volumes/ors/logs/ors/:/var/log/ors/
+      - ./volumes/ors/logs/tomcat/:/usr/local/tomcat/logs
+      - ./routing/app.config:/ors-core/openrouteservice/target/classes/app.config
+      - ./volumes/ors/data/italy-latest.osm.pbf:/ors-core/data/osm_file.pbf
+    environment:
+      - BUILD_GRAPHS=False  # Forces the container to rebuild the graphs, e.g. when PBF is changed in app.config
+      - JAVA_OPTS="-Djava.awt.headless=true -server -XX:TargetSurvivorRatio=75 -XX:SurvivorRatio=64 -XX:MaxTenuringThreshold=3 -XX:+UseConcMarkSweepGC -XX:+UseParNewGC -XX:ParallelGCThreads=4 -Xms${ROUTING_HEAP} -Xmx${ROUTING_HEAP}"
+      - CATALINA_OPTS="-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=9001 -Dcom.sun.management.jmxremote.rmi.port=9001 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Djava.rmi.server.hostname=localhost"
+    restart: unless-stopped
+
+  fleet-ksql-headless:
+    networks:
+      - demo-network
+    container_name: fleet-ksql-headless
+    image: confluentinc/cp-ksql-server:5.4.1
+    volumes:
+      - ./ksql/fleet_querries.sql:/opt/fleet-demo/fleet_querries.sql
+    environment:
+      KSQL_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
+      KSQL_KSQL_SERVICE_ID: fleet-ksql_
+      KSQL_KSQL_QUERIES_FILE: /opt/fleet-demo/fleet_querries.sql
+    restart: unless-stopped
+
