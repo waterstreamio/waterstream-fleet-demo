@@ -16,8 +16,8 @@ services:
       ROUTING_URL: http://routing:8080/ors/directions
       VEHICLES_TOTAL_NUMBER: ${VEHICLES_TOTAL_NUMBER}
       VEHICLES_VISIBLE_NUMBER: ${VEHICLES_VISIBLE_NUMBER}
-      MQTT_HOST: waterstream
-      MQTT_PORT: 1883
+      MQTT_HOST: ${MQTT_HOST}
+      MQTT_PORT: ${MQTT_PORT}
       MQTT_TOPIC_PREFIX: waterstream-fleet-demo/
       KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
       MONITORING_PORT: 8091
@@ -38,6 +38,9 @@ services:
     container_name: fleet-ui
     environment:
       MESSAGE_COUNT_PANEL_ADDRESS: ${MESSAGE_COUNT_PANEL_ADDRESS}
+      MQTT_HOST: ${MQTT_WEBSERVICE_HOST}
+      MQTT_PORT: ${MQTT_WEBSERVICE_PORT}
+      MQTT_USE_SSL: ${MQTT_WEBSERVICE_USE_SSL}
     image: io.simplematter/fleet-ui
     depends_on:
       - fleet-service
