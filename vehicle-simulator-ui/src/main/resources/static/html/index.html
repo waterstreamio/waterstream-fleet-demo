@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.2.0/dist/leaflet.css"
           integrity="sha512-M2wvCLH6DSRazYeZRIm1JnYyh22purTM+FDB5CsyxtQJYeKq83arPe5wgbNmcFXGqiSH2XR8dT/fJISVA1r/zQ=="
           crossorigin=""/>
+    <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=Muli" />
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/emn178/chartjs-plugin-labels/src/chartjs-plugin-labels.js"></script>
@@ -25,7 +26,7 @@
 
     <link rel="icon"
           type="image/png"
-          href="img/SimpleMatter_logo_blue_nopayoff.png">
+          href="img/favicon.png">
 </head>
 
 <body>
@@ -180,18 +181,10 @@ CREATE STREAM directions_vehicles_mqtt
 </pre>
                 </code>
             </div>
-        </div>
-        <div class="reveal pb50">
-            <h3>Try it now!</h3>
-            <p>You can try it today for free! Go to <a target="_blank"
-                                                       href="https://waterstream.io#contact">waterstream.io</a>
-                to get
-                access to a running and dedicated instance.</p>
-            <p>Do you want to run it on premise? You are covered too, just drop us a message on our contact form and
-                we'll get back in touch with you.</p>
-            <div class="text-center">
-                <a class="btn btn-primary mt10 scroll-link" style="color: white;" target="_blank"
-                   href="https://waterstream.io#contact">Try Waterstream</a>
+            <div class="reveal pb50">
+                <h3>Do you want to know more?</h3>
+                <p>Visit Waterstream product site at <a target="_blank"
+                                                        href="https://waterstream.io">https://waterstream.io</a> an learn how you can combine MQTT with Kafka, the standard de-facto streaming platform.</p>
             </div>
         </div>
         <div class="leaflet-sidebar-pane " id="info">
@@ -199,7 +192,7 @@ CREATE STREAM directions_vehicles_mqtt
                 Info
                 <span class="leaflet-sidebar-close"><i class="fas fa-info-circle"></i></span>
             </h1>
-            <p> Want to know more about Waterstream? Check out <a href="https://waterstream.io">waterstream.io now!.</a>
+            <p> Want to know more about Waterstream? Check out <a href="https://waterstream.io">https://waterstream.io!</a>
             </p>
         </div>
     </div>
@@ -261,18 +254,18 @@ CREATE STREAM directions_vehicles_mqtt
             datasets: [{
                 data: [0, 0, 0, 0],
                 backgroundColor: [
-                    '#01077DFF',
+                    '#27B2FDFF',
                     '#4E57FDFF',
-                    '#030FFCFF',
+                    '#015E90FF',
                     '#272B7DFF'
                 ],
                 borderColor: [
-                    '#352B48FF',
-                    '#352B48FF',
-                    '#352B48FF',
-                    '#352B48FF'
+                    '#FFFFFFFF',
+                    '#FFFFFFFF',
+                    '#FFFFFFFF',
+                    '#FFFFFFFF'
                 ],
-                borderWidth: 1
+                borderWidth: 3
             }]
         },
         options: {
@@ -393,7 +386,7 @@ CREATE STREAM directions_vehicles_mqtt
                 //vehicle moved/created
                 try {
                     const vehicle = JSON.parse(message.payloadString)
-                    console.debug("vehicle moved", message.destinationName, vehicle)
+                    // console.debug("vehicle moved", message.destinationName, vehicle)
 
                     let marker = registry.get(vehicle.plate);
                     if (marker == null) {
@@ -432,7 +425,7 @@ CREATE STREAM directions_vehicles_mqtt
     window.cookieconsent.initialise({
         container: document.getElementById("cookieconsent"),
         palette: {
-            popup: {background: "#352B48"},
+            popup: {background: "#015E90"},
             button: {background: "#0067FF"},
         },
         revokable: false,
